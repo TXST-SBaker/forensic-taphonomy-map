@@ -1,6 +1,6 @@
 # 🌍 Global Forensic Taphonomy Facilities Map
 
-Interactive map of **13 active human decomposition research facilities** ("body farms") worldwide.
+Interactive map of **13 active human decomposition research facilities** worldwide.
 
 **Live Demo:** https://TXST-SBaker.github.io/forensic-taphonomy-map/
 
