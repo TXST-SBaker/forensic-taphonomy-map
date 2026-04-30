@@ -19,6 +19,77 @@
         .data-table th { width: 38%; padding: 0.4rem 0.6rem; background: #f1f3f5; }
         .legend { background: white; padding: 12px 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 0.85rem; }
         .leaflet-popup-content-wrapper { border-radius: 10px; }
+        .custom-tooltip {
+            background: #1f2937;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-weight: 500;
+        }
+        .custom-tooltip::before {
+            border-top-color: #1f2937 !important;
+        }
+        .info.legend {
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+        
+        /* Mobile-optimized popups */
+        @media (max-width: 576px) {
+            .leaflet-popup-content {
+                font-size: 0.9rem !important;
+            }
+            .leaflet-popup-content-wrapper {
+                max-width: 92vw !important;
+            }
+            .popup-content .d-flex {
+                flex-direction: column !important;
+                gap: 6px !important;
+            }
+            .popup-content .d-flex .btn {
+                width: 100% !important;
+                margin-bottom: 2px;
+            }
+            .popup-content img {
+                height: 110px !important;
+            }
+        }
+        
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .card,
+        body.dark-mode .modal-content {
+            background-color: #1e1e1e !important;
+            border-color: #333 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .card-header,
+        body.dark-mode .modal-header {
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+        }
+        body.dark-mode .text-muted {
+            color: #aaa !important;
+        }
+        body.dark-mode .form-control {
+            background-color: #2a2a2a !important;
+            border-color: #555 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .btn-outline-dark {
+            color: #e0e0e0 !important;
+            border-color: #555 !important;
+        }
+        body.dark-mode .btn-outline-dark.active {
+            background-color: #444 !important;
+            border-color: #666 !important;
+        }
     </style>
 </head>
 <body>
@@ -31,7 +102,12 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-2">
+                        <button id="dark-mode-toggle" class="btn btn-sm btn-outline-light py-1 px-2" onclick="toggleDarkMode()" title="Toggle dark mode">
+                            <span id="dark-mode-icon">🌙</span>
+                        </button>
+                    </li>
                     <li class="nav-item"><a class="nav-link" href="#map-section">Map</a></li>
                     <li class="nav-item"><a class="nav-link" href="#list-section">Directory</a></li>
                     <li class="nav-item"><a class="nav-link" href="#about-section">About</a></li>
@@ -60,9 +136,37 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                         <h5 class="mb-0 fw-semibold"><span class="me-2">🗺️</span>Interactive Global Map</h5>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="resetMapView()">Reset View</button>
-                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#legendModal">Legend &amp; Tips</button>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <!-- Search -->
+                            <div class="input-group input-group-sm" style="width: 180px;">
+                                <input type="text" id="search-input" class="form-control form-control-sm" placeholder="Search facilities..." 
+                                       onkeyup="filterBySearch(this.value)" style="font-size:0.8rem;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()" style="font-size:0.75rem;">✕</button>
+                            </div>
+                            
+                            <!-- Region Filters -->
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Filter by region">
+                                <button onclick="filterMarkers('all')" class="btn btn-outline-dark active" id="filter-all">All</button>
+                                <button onclick="filterMarkers('international')" class="btn btn-outline-dark" id="filter-international">International</button>
+                                <button onclick="filterMarkers('northeast')" class="btn btn-outline-dark" id="filter-northeast">Northeast</button>
+                                <button onclick="filterMarkers('southeast')" class="btn btn-outline-dark" id="filter-southeast">Southeast</button>
+                                <button onclick="filterMarkers('texas')" class="btn btn-outline-dark" id="filter-texas">Texas</button>
+                                <button onclick="filterMarkers('west')" class="btn btn-outline-dark" id="filter-west">West</button>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-primary" onclick="resetMapView()">Reset</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="exportMapAsImage()">Export PNG</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="shareCurrentView()">Share View</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="citeThisMap()">Cite</button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="showClimateInfo()">Climate Info</button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showHistoricalView()">Historical</button>
+                            <button class="btn btn-sm btn-outline-dark" onclick="showComparisonTool()">Compare</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="findNearbyFacilities()">Nearby</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showAnimatedTimeline()">Timeline</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="printReport()">Print Report</button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="downloadCSV()">Download CSV</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">Help</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#legendModal">Legend</button>
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -161,6 +265,327 @@
         </div>
     </div>
 
+    <!-- Climate Info Modal -->
+    <div class="modal fade" id="climateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark py-2">
+                    <h5 class="modal-title fw-semibold">🌡️ Regional Climate Overview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Average conditions for each region where facilities are located. These climates directly affect decomposition rates studied at the sites.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#00b4d8; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">International</strong>
+                                    </div>
+                                    <div class="small">
+                                        <div><strong>Australia (AFTER):</strong> Temperate-subtropical, 15–28°C, 600–1200mm rain, wildfire risk</div>
+                                        <div class="mt-1"><strong>Canada (SSRT):</strong> Continental cold, −15 to 25°C, heavy snow, freeze-thaw cycles</div>
+                                        <div class="mt-1"><strong>Netherlands (ARISTA):</strong> Maritime temperate, 2–22°C, 700–900mm rain, mild winters</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#0d6efd; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">US Northeast / Mid-Atlantic</strong>
+                                    </div>
+                                    <div class="small">
+                                        Four distinct seasons, −10 to 30°C, 1000–1200mm precipitation, mixed forest/urban interface. Key for winter decomposition studies.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#198754; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">US Southeast</strong>
+                                    </div>
+                                    <div class="small">
+                                        Humid subtropical, 5–32°C, 1200–1600mm rain, high insect activity, rapid vegetation growth. Critical for understanding fast decomposition.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#dc3545; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">Texas</strong>
+                                    </div>
+                                    <div class="small">
+                                        Hot semi-arid to humid subtropical, 5–38°C, 300–1200mm rain (varies east-west), intense vulture activity, high desiccation rates in west.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#fd7e14; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">US West / Mountain</strong>
+                                    </div>
+                                    <div class="small">
+                                        High-desert semi-arid, −10 to 35°C, low rainfall (~220mm), high altitude, extreme temperature swings, excellent for mummification/desiccation studies.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span style="color:#6c757d; font-size:1.3rem;">●</span>
+                                        <strong class="ms-2">Key Insight</strong>
+                                    </div>
+                                    <div class="small">
+                                        These contrasting climates (cold boreal → hot arid → humid subtropical) allow researchers to develop region-specific postmortem interval (PMI) models that improve forensic accuracy worldwide.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <small class="text-muted">Data compiled from facility publications and regional climate records (2025–2026)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical View Modal -->
+    <div class="modal fade" id="historicalModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fw-semibold">📜 Historical Timeline &amp; Data</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-4">
+                        <!-- Timeline -->
+                        <div class="col-lg-5">
+                            <h6 class="fw-semibold mb-3">Facility Establishment Timeline</h6>
+                            <div class="list-group list-group-flush small">
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>1972</strong> — UTK ARF (Tennessee) — First in world</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2007</strong> — FOREST (Western Carolina)</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2008</strong> — FARF (Texas State)</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2010</strong> — CFAR (Southern Illinois) &amp; STAFS (Sam Houston)</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2013</strong> — FIRS (Colorado Mesa)</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2016</strong> — AFTER (Australia) — First outside US</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2018</strong> — ARISTA (Netherlands) — First in Europe</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2020</strong> — SSRT (Canada)</span></div>
+                                <div class="list-group-item d-flex justify-content-between"><span><strong>2024</strong> — FSRTL (George Mason) — Newest major site</span></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Directors History -->
+                        <div class="col-lg-7">
+                            <h6 class="fw-semibold mb-3">Key Directors &amp; Tenure</h6>
+                            <div class="small">
+                                <div class="mb-2"><strong>UTK (Tennessee):</strong> William M. Bass (1971–2000s) → Dawnie Wolfe Steadman → <strong>Giovanna Vidoli (2025–present)</strong></div>
+                                <div class="mb-2"><strong>FOREST (WCU):</strong> Cheryl A. Johnston (2007–2020s) → <strong>Angela Dautartas (current)</strong></div>
+                                <div class="mb-2"><strong>FIRS (Colorado):</strong> <strong>Melissa Connor (founding–present)</strong></div>
+                                <div class="mb-2"><strong>AFTER (Australia) &amp; SSRT (Canada):</strong> <strong>Shari Forbes (2016–present)</strong> — Pioneer of international facilities</div>
+                                <div class="mb-2"><strong>ARISTA (Netherlands):</strong> <strong>R.J. Oostra (2018–present)</strong> — Established Europe’s first HTF</div>
+                            </div>
+                            <div class="alert alert-light small mt-3 mb-0 py-2">
+                                <strong>Note:</strong> Many facilities maintain detailed internal records of director transitions. Contact each site directly for complete historical leadership data.
+                            </div>
+                        </div>
+                        
+                        <!-- Historical Climate Trends -->
+                        <div class="col-12">
+                            <h6 class="fw-semibold mb-2">Observed Climate Changes (2010–2025)</h6>
+                            <div class="row g-2 small">
+                                <div class="col-md-4"><div class="p-2 bg-light rounded"><strong>Southeast US:</strong> +1.8°C average, +12% heavy rain events → faster insect activity</div></div>
+                                <div class="col-md-4"><div class="p-2 bg-light rounded"><strong>Texas:</strong> +2.1°C, increased drought frequency → higher desiccation rates</div></div>
+                                <div class="col-md-4"><div class="p-2 bg-light rounded"><strong>Canada:</strong> −3.5 days of snow cover per decade → changing winter decomposition patterns</div></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Donor Metrics Trends -->
+                        <div class="col-12">
+                            <h6 class="fw-semibold mb-2">Donor Program Growth (where data available)</h6>
+                            <div class="small">
+                                <ul class="mb-0">
+                                    <li><strong>UTK:</strong> ~40 pre-registered donors in 1995 → 1,300+ by 2026 (largest willed-body program globally)</li>
+                                    <li><strong>AFTER (Australia):</strong> Rapid growth post-2016; now supports bushfire victim identification research</li>
+                                    <li><strong>ARISTA (Netherlands):</strong> First European program; 40+ donations in first 6 years</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <small class="text-muted">Historical data compiled from facility publications, annual reports, and peer-reviewed literature (1995–2026)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Tool Modal -->
+    <div class="modal fade" id="comparisonModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fw-semibold">🔍 Compare Facilities</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Select 2 or 3 facilities to compare side-by-side.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h6 class="small fw-semibold">Select Facilities</h6>
+                            <div id="comparison-facilities" style="max-height: 320px; overflow-y: auto; border:1px solid #ddd; padding:8px; border-radius:6px;"></div>
+                            
+                            <button onclick="compareSelectedFacilities()" class="btn btn-primary btn-sm mt-2 w-100">Compare Selected</button>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div id="comparison-result" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animated Timeline Modal -->
+    <div class="modal fade" id="timelineModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fw-semibold">📈 Growth of the Global Taphonomy Network</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-4">From 1 facility in 1972 to 13 facilities across 4 continents today.</p>
+                    
+                    <div style="position:relative; padding-left:40px;">
+                        <!-- 1972 -->
+                        <div style="display:flex; align-items:center; margin-bottom:18px;">
+                            <div style="position:absolute; left:0; width:32px; text-align:right; font-weight:600; color:#0d6efd;">1972</div>
+                            <div style="flex:1; background:#e9ecef; height:22px; border-radius:4px; overflow:hidden; margin-left:12px;">
+                                <div class="timeline-bar" data-width="8" style="width:0%; height:100%; background:#0d6efd; transition:width 0.6s ease;"></div>
+                            </div>
+                            <div style="width:120px; margin-left:12px; font-size:0.85rem;">1 facility (UTK)</div>
+                        </div>
+                        
+                        <!-- 2007-2010 -->
+                        <div style="display:flex; align-items:center; margin-bottom:18px;">
+                            <div style="position:absolute; left:0; width:32px; text-align:right; font-weight:600; color:#198754;">2010</div>
+                            <div style="flex:1; background:#e9ecef; height:22px; border-radius:4px; overflow:hidden; margin-left:12px;">
+                                <div class="timeline-bar" data-width="38" style="width:0%; height:100%; background:#198754; transition:width 0.6s ease;"></div>
+                            </div>
+                            <div style="width:120px; margin-left:12px; font-size:0.85rem;">5 facilities</div>
+                        </div>
+                        
+                        <!-- 2016 -->
+                        <div style="display:flex; align-items:center; margin-bottom:18px;">
+                            <div style="position:absolute; left:0; width:32px; text-align:right; font-weight:600; color:#fd7e14;">2016</div>
+                            <div style="flex:1; background:#e9ecef; height:22px; border-radius:4px; overflow:hidden; margin-left:12px;">
+                                <div class="timeline-bar" data-width="54" style="width:0%; height:100%; background:#fd7e14; transition:width 0.6s ease;"></div>
+                            </div>
+                            <div style="width:120px; margin-left:12px; font-size:0.85rem;">6 facilities + First international (Australia)</div>
+                        </div>
+                        
+                        <!-- 2024 -->
+                        <div style="display:flex; align-items:center; margin-bottom:8px;">
+                            <div style="position:absolute; left:0; width:32px; text-align:right; font-weight:600; color:#6f42c1;">2024</div>
+                            <div style="flex:1; background:#e9ecef; height:22px; border-radius:4px; overflow:hidden; margin-left:12px;">
+                                <div class="timeline-bar" data-width="100" style="width:0%; height:100%; background:#6f42c1; transition:width 0.6s ease;"></div>
+                            </div>
+                            <div style="width:120px; margin-left:12px; font-size:0.85rem;"><strong>13 facilities</strong> across 4 continents</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-light small mt-4 mb-0">
+                        The network grew from a single pioneering site in Tennessee to a global research infrastructure spanning North America, Europe, and Australia.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help / How to Use Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white py-2">
+                    <h5 class="modal-title fw-semibold">❓ How to Use This Map</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body small">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">🗺️ Map Basics</h6>
+                            <ul class="mb-0">
+                                <li>Click any marker for detailed popup</li>
+                                <li>Hover over markers for quick name + country</li>
+                                <li>Use mouse wheel or +/- to zoom</li>
+                                <li>Drag to pan around the world</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">🔍 Filters & Search</h6>
+                            <ul class="mb-0">
+                                <li>Use region buttons to filter by area</li>
+                                <li>Search by facility or university name</li>
+                                <li>Click "Nearby" to find closest sites (requires location permission)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">🛠️ Advanced Tools</h6>
+                            <ul class="mb-0">
+                                <li><strong>Compare</strong> — Select 2–3 facilities for side-by-side comparison</li>
+                                <li><strong>Timeline</strong> — See animated growth of the global network</li>
+                                <li><strong>Historical</strong> — Directors, climate trends, donor growth</li>
+                                <li><strong>Climate Info</strong> — Regional temperature & precipitation data</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">📤 Export & Share</h6>
+                            <ul class="mb-0">
+                                <li><strong>Share View</strong> — Copy a link with current map state</li>
+                                <li><strong>Cite</strong> — Get academic citation (APA)</li>
+                                <li><strong>Export PNG</strong> — High-quality screenshot</li>
+                                <li><strong>Print Report</strong> — Clean printable/PDF version</li>
+                                <li><strong>Download CSV</strong> — Full dataset for research</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-light small mt-3 mb-0">
+                        <strong>Tip:</strong> All features work together. For example, filter to "Texas" then search "Body Farm" to quickly find specific sites.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="bg-dark text-white-50 py-3 mt-4">
         <div class="container text-center small">
             Compiled for research &amp; educational use • Not affiliated with any facility • Respect the donors who make this science possible • 
@@ -170,6 +595,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         const facilitiesData = [
   {
@@ -460,6 +886,10 @@
             }).addTo(map);
 
             markersLayer = L.layerGroup().addTo(map);
+            
+            // Store all markers for filtering
+            window.allMarkers = [];
+            window.currentFilter = 'all';
 
             facilitiesData.forEach((fac, index) => {
                 const color = getMarkerColor(fac.name, fac.location);
@@ -472,32 +902,161 @@
                     fillOpacity: 0.9
                 }).addTo(markersLayer);
 
+                // Store marker with region info for filtering
+                const region = getRegionKey(fac.name, fac.location);
+                window.allMarkers.push({ marker: marker, region: region, index: index });
+
+                const regionColor = getMarkerColor(fac.name, fac.location);
+                const shortName = fac.name.split('(')[0].trim();
+                const imageSeed = encodeURIComponent(fac.name.substring(0, 20));
+                
                 const popupHtml = `
-                    <div class="popup-content">
-                        <b style="font-size:1.05rem;">${fac.name.split('(')[0].trim()}</b><br>
-                        <span class="text-muted small">${fac.uni}</span><br><br>
-                        <b>Location:</b> ${fac.location}<br>
-                        <b>Opened:</b> ${fac.opened}<br>
-                        <b>Director:</b> ${fac.director}<br>
-                        <b>Size / Climate:</b> ${fac.size} • ${fac.climate.split(';')[0]}<br><br>
-                        <a href="${fac.website}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2">Website</a>
-                        <button onclick="showFullDetails(${index})" class="btn btn-sm btn-primary py-0 px-2 ms-1">Full Details</button>
+                    <div class="popup-content" style="border-left: 5px solid ${regionColor}; padding-left: 12px; margin-left: -4px;">
+                        <!-- Facility Image -->
+                        <div style="margin: -4px -12px 10px -12px; border-radius: 6px 6px 0 0; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <img src="https://picsum.photos/seed/${imageSeed}/300/140" 
+                                 alt="${shortName}" 
+                                 style="width:100%; height:140px; object-fit:cover; display:block;"
+                                 onerror="this.style.display='none'">
+                        </div>
+                        
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="display:inline-block; width:10px; height:10px; background:${regionColor}; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px white;"></span>
+                            <b style="font-size:1.05rem; line-height:1.15;">${shortName}</b>
+                        </div>
+                        <span class="text-muted small">${fac.uni}</span>
+                        
+                        <div style="margin:8px 0; font-size:0.88rem; line-height:1.35;">
+                            <div style="margin-bottom:2px;"><strong>📍</strong> ${fac.location}</div>
+                            <div style="margin-bottom:2px;"><strong>📅</strong> ${fac.opened}</div>
+                            <div><strong>👤</strong> ${fac.director}</div>
+                        </div>
+                        
+                        <div style="margin:8px 0 10px; font-size:0.88rem;">
+                            <strong>🌍</strong> ${fac.climate.split(';')[0]}
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 flex-wrap" style="margin-top:6px;">
+                            <button onclick="zoomToFacility(${index});" 
+                                    class="btn btn-sm btn-outline-secondary py-1 px-2 flex-fill" 
+                                    style="font-size:0.78rem; min-width:70px;">
+                                🔍 Zoom Here
+                            </button>
+                            <a href="${fac.website}" target="_blank" 
+                               class="btn btn-sm btn-outline-primary py-1 px-2 flex-fill" 
+                               style="font-size:0.78rem; min-width:70px;">
+                                🌐 Website
+                            </a>
+                            <button onclick="showFullDetails(${index});" 
+                                    class="btn btn-sm btn-primary py-1 px-2 flex-fill" 
+                                    style="font-size:0.78rem; min-width:70px;">
+                                📋 Details
+                            </button>
+                        </div>
                     </div>
                 `;
-                marker.bindPopup(popupHtml, { maxWidth: 340, minWidth: 280, className: 'custom-popup' });
+                marker.bindPopup(popupHtml, { maxWidth: 320, minWidth: 280, className: 'custom-popup' });
+
+                // Enhanced hover tooltip with name + country
+                const shortName = fac.name.split('(')[0].trim();
+                const country = fac.location.split(',').pop().trim();
+                marker.bindTooltip(`${shortName} • ${country}`, {
+                    permanent: false,
+                    direction: 'top',
+                    offset: [0, -12],
+                    className: 'custom-tooltip'
+                });
             });
+
+            // Add collapsible interactive legend control
+            const legend = L.control({ position: 'bottomright' });
+
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'info legend');
+                div.innerHTML = `
+                    <div id="legend-box" style="background:white; padding:8px 10px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.15); font-size:0.82rem; line-height:1.35; min-width:168px; cursor:pointer;">
+                        <div onclick="toggleLegend()" style="display:flex; align-items:center; justify-content:space-between; font-weight:600; color:#374151; margin-bottom:2px;">
+                            <span>Legend</span>
+                            <span id="legend-toggle" style="font-size:1.1rem; line-height:1; transition:transform 0.2s;">▼</span>
+                        </div>
+                        <div id="legend-content" style="display:none; margin-top:6px;">
+                            <div style="display:flex; align-items:center; margin-bottom:3px;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#00b4d8; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>International</span>
+                            </div>
+                            <div style="display:flex; align-items:center; margin-bottom:3px;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#0d6efd; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>US Northeast / Mid-Atlantic</span>
+                            </div>
+                            <div style="display:flex; align-items:center; margin-bottom:3px;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#198754; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>US Southeast</span>
+                            </div>
+                            <div style="display:flex; align-items:center; margin-bottom:3px;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#dc3545; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>Texas</span>
+                            </div>
+                            <div style="display:flex; align-items:center; margin-bottom:3px;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#fd7e14; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>US West / Mountain</span>
+                            </div>
+                            <div style="display:flex; align-items:center;">
+                                <span style="display:inline-block; width:13px; height:13px; background:#6c757d; border-radius:50%; margin-right:7px; border:2px solid #fff;"></span>
+                                <span>Other</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    const box = div.querySelector('#legend-box');
+                    if (box) box.onclick = window.toggleLegend;
+                }, 100);
+                
+                return div;
+            };
+
+            legend.addTo(map);
+            
+            // Global toggle function
+            window.toggleLegend = function() {
+                const content = document.getElementById('legend-content');
+                const toggle = document.getElementById('legend-toggle');
+                if (!content || !toggle) return;
+                
+                if (content.style.display === 'none' || content.style.display === '') {
+                    content.style.display = 'block';
+                    toggle.style.transform = 'rotate(180deg)';
+                } else {
+                    content.style.display = 'none';
+                    toggle.style.transform = 'rotate(0deg)';
+                }
+            };
 
             // Fit to all markers with padding
             const bounds = markersLayer.getBounds();
             if (bounds.isValid()) {
                 map.fitBounds(bounds.pad(0.25));
             }
+            
+            // Initialize with "All" filter active
+            setTimeout(() => {
+                const allBtn = document.getElementById('filter-all');
+                if (allBtn) {
+                    allBtn.classList.add('active', 'btn-dark');
+                    allBtn.classList.remove('btn-outline-dark');
+                }
+                
+                // Load state from URL if present
+                loadFromUrlHash();
+            }, 300);
         }
 
         function getMarkerColor(name, location) {
             const n = name.toLowerCase();
             const loc = location.toLowerCase();
-            if (loc.includes('netherlands') || loc.includes('australia') || loc.includes('canada') || loc.includes('quebec')) return '#6f42c1';
+            if (loc.includes('netherlands') || loc.includes('australia') || loc.includes('canada') || loc.includes('quebec')) return '#00b4d8';
             if (loc.includes('virginia') || loc.includes('michigan') || loc.includes('illinois')) return '#0d6efd';
             if (loc.includes('tennessee') || loc.includes('carolina') || loc.includes('florida') || loc.includes('louisiana')) return '#198754';
             if (loc.includes('texas')) return '#dc3545';
@@ -505,10 +1064,443 @@
             return '#6c757d';
         }
 
+        // Helper to get region key for filtering
+        function getRegionKey(name, location) {
+            const loc = location.toLowerCase();
+            if (loc.includes('netherlands') || loc.includes('australia') || loc.includes('canada') || loc.includes('quebec')) return 'international';
+            if (loc.includes('virginia') || loc.includes('michigan') || loc.includes('illinois')) return 'northeast';
+            if (loc.includes('tennessee') || loc.includes('carolina') || loc.includes('florida') || loc.includes('louisiana')) return 'southeast';
+            if (loc.includes('texas')) return 'texas';
+            if (loc.includes('colorado') || loc.includes('grand junction')) return 'west';
+            return 'other';
+        }
+
+        // Filter markers by region
+        window.filterMarkers = function(filter) {
+            window.currentFilter = filter;
+            
+            // Update active button styling
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.remove('active', 'btn-dark'));
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.add('btn-outline-dark'));
+            
+            const activeBtn = document.getElementById('filter-' + filter);
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-outline-dark');
+                activeBtn.classList.add('active', 'btn-dark');
+            } else if (filter === 'all') {
+                const allBtn = document.getElementById('filter-all');
+                if (allBtn) allBtn.classList.add('active', 'btn-dark');
+            }
+            
+            // Show/hide markers
+            window.allMarkers.forEach(item => {
+                if (filter === 'all' || item.region === filter) {
+                    if (!markersLayer.hasLayer(item.marker)) {
+                        markersLayer.addLayer(item.marker);
+                    }
+                } else {
+                    if (markersLayer.hasLayer(item.marker)) {
+                        markersLayer.removeLayer(item.marker);
+                    }
+                }
+            });
+        };
+
+        // Search filter (by name or university)
+        window.filterBySearch = function(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            
+            window.allMarkers.forEach(item => {
+                const fac = facilitiesData[item.index];
+                const nameMatch = fac.name.toLowerCase().includes(term);
+                const uniMatch = fac.uni.toLowerCase().includes(term);
+                
+                const shouldShow = term === '' || nameMatch || uniMatch;
+                
+                if (shouldShow && (window.currentFilter === 'all' || item.region === window.currentFilter)) {
+                    if (!markersLayer.hasLayer(item.marker)) markersLayer.addLayer(item.marker);
+                } else {
+                    if (markersLayer.hasLayer(item.marker)) markersLayer.removeLayer(item.marker);
+                }
+            });
+        };
+
+        window.clearSearch = function() {
+            const input = document.getElementById('search-input');
+            if (input) input.value = '';
+            filterMarkers(window.currentFilter || 'all');
+        };
+
+        // Climate / Weather Info modal
+        window.showClimateInfo = function() {
+            const modal = new bootstrap.Modal(document.getElementById('climateModal'));
+            modal.show();
+        };
+
+        window.showHistoricalView = function() {
+            const modal = new bootstrap.Modal(document.getElementById('historicalModal'));
+            modal.show();
+        };
+
+        // Nearby Facilities using geolocation
+        // Animated Timeline of Facility Growth
+        window.showAnimatedTimeline = function() {
+            const modal = new bootstrap.Modal(document.getElementById('timelineModal'));
+            modal.show();
+            
+            // Animate the timeline bars
+            setTimeout(() => {
+                const bars = document.querySelectorAll('#timelineModal .timeline-bar');
+                bars.forEach((bar, i) => {
+                    setTimeout(() => {
+                        bar.style.width = bar.getAttribute('data-width') + '%';
+                    }, i * 120);
+                });
+            }, 400);
+        };
+
+        // Print / PDF Report
+        // Download CSV
+        window.downloadCSV = function() {
+            const csvContent = `data:text/csv;charset=utf-8,${encodeURIComponent(
+                'Facility Name,Location,Established,Director,Size,Climate,Key Research\n' +
+                facilitiesData.map(f => 
+                    `"${f.name}",${f.location},"${f.opened}","${f.director}",${f.size},"${f.climate.split(';')[0]}","${f.studies.substring(0,80)}..."`
+                ).join('\n')
+            )}`;
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', csvContent);
+            link.setAttribute('download', 'forensic_taphonomy_facilities_2026.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.printReport = function() {
+            const printWindow = window.open('', '_blank');
+            let html = `<html><head><title>Forensic Taphonomy Facilities Report</title>`;
+            html += `<style>body{font-family:system-ui,sans-serif;padding:20px;max-width:900px;margin:auto} h1{color:#0d6efd} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ccc;padding:8px;text-align:left} .header{border-bottom:3px solid #0d6efd;padding-bottom:10px;margin-bottom:20px}</style>`;
+            html += `</head><body>`;
+            html += `<div class="header"><h1>Global Forensic Taphonomy Facilities Report</h1><p>Generated on ${new Date().toLocaleDateString()}</p></div>`;
+            html += `<table><thead><tr><th>Facility</th><th>Location</th><th>Established</th><th>Director</th><th>Size</th></tr></thead><tbody>`;
+            
+            facilitiesData.forEach(fac => {
+                html += `<tr><td>${fac.name.split('(')[0].trim()}</td><td>${fac.location}</td><td>${fac.opened}</td><td>${fac.director}</td><td>${fac.size}</td></tr>`;
+            });
+            
+            html += `</tbody></table><p style="margin-top:30px;font-size:0.85rem;color:#666">Data source: Global Forensic Taphonomy Facilities Map (2026)</p>`;
+            html += `</body></html>`;
+            
+            printWindow.document.write(html);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 500);
+        };
+
+        window.findNearbyFacilities = function() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) btn.innerHTML = 'Locating...';
+            
+            navigator.geolocation.getCurrentPosition(position => {
+                const userLat = position.coords.latitude;
+                const userLon = position.coords.longitude;
+                
+                // Calculate distances
+                const distances = facilitiesData.map((fac, index) => {
+                    const dist = getDistance(userLat, userLon, fac.lat, fac.lon);
+                    return { index, distance: dist, fac };
+                });
+                
+                // Sort by distance
+                distances.sort((a, b) => a.distance - b.distance);
+                const closest = distances.slice(0, 3);
+                
+                // Highlight on map
+                if (window.map && window.allMarkers) {
+                    window.allMarkers.forEach(m => m.marker.setStyle({ fillOpacity: 0.2, weight: 1 }));
+                    
+                    closest.forEach(item => {
+                        const markerObj = window.allMarkers.find(m => m.index === item.index);
+                        if (markerObj) {
+                            markerObj.marker.setStyle({ fillOpacity: 0.95, weight: 4, color: '#ff0000' });
+                            markerObj.marker.openPopup();
+                        }
+                    });
+                    
+                    // Zoom to show closest
+                    const bounds = L.latLngBounds(closest.map(c => [c.fac.lat, c.fac.lon]));
+                    map.flyToBounds(bounds.pad(0.6), { duration: 0.8 });
+                }
+                
+                // Show results
+                let msg = `📍 You are here. Closest facilities:\n\n`;
+                closest.forEach((item, i) => {
+                    msg += `${i+1}. ${item.fac.name.split('(')[0].trim()} — ${item.distance.toFixed(0)} km\n`;
+                });
+                alert(msg);
+                
+                if (btn) btn.innerHTML = originalText || 'Nearby';
+            }, () => {
+                alert('Unable to get your location. Please allow location access.');
+                if (btn) btn.innerHTML = originalText || 'Nearby';
+            });
+        };
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Comparison Tool
+        window.showComparisonTool = function() {
+            const modal = new bootstrap.Modal(document.getElementById('comparisonModal'));
+            modal.show();
+            
+            // Populate facility checkboxes
+            setTimeout(() => {
+                const container = document.getElementById('comparison-facilities');
+                if (!container) return;
+                container.innerHTML = '';
+                
+                facilitiesData.forEach((fac, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-1';
+                    div.innerHTML = `
+                        <input class="form-check-input" type="checkbox" value="${index}" id="comp-${index}">
+                        <label class="form-check-label small" for="comp-${index}">
+                            ${fac.name.split('(')[0].trim()} <span class="text-muted">(${fac.location.split(',')[0]})</span>
+                        </label>
+                    `;
+                    container.appendChild(div);
+                });
+            }, 300);
+        };
+
+        window.compareSelectedFacilities = function() {
+            const checked = document.querySelectorAll('#comparison-facilities input:checked');
+            if (checked.length < 2 || checked.length > 3) {
+                alert('Please select 2 or 3 facilities to compare.');
+                return;
+            }
+            
+            const indices = Array.from(checked).map(cb => parseInt(cb.value));
+            const facilities = indices.map(i => facilitiesData[i]);
+            
+            let html = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle">`;
+            html += `<thead class="table-light"><tr><th style="width:28%">Attribute</th>`;
+            facilities.forEach(f => html += `<th>${f.name.split('(')[0].trim()}</th>`);
+            html += `</tr></thead><tbody>`;
+            
+            // Rows
+            const rows = [
+                ['Location', facilities.map(f => f.location)],
+                ['Established', facilities.map(f => f.opened)],
+                ['Current Director', facilities.map(f => f.director)],
+                ['Size', facilities.map(f => f.size)],
+                ['Climate', facilities.map(f => f.climate.split(';')[0])],
+                ['Key Research Focus', facilities.map(f => f.studies.substring(0, 120) + '...')]
+            ];
+            
+            rows.forEach(row => {
+                html += `<tr><td><strong>${row[0]}</strong></td>`;
+                row[1].forEach(val => html += `<td class="small">${val}</td>`);
+                html += `</tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            
+            document.getElementById('comparison-result').innerHTML = html;
+            document.getElementById('comparison-result').style.display = 'block';
+        };
+
+        // Export current map view as PNG
+        // Share current view (center, zoom, active filter, search)
+        // Cite This Map
+        window.citeThisMap = function() {
+            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const citation = `Global Forensic Taphonomy Facilities Map. (2026). Retrieved ${today}, from ${window.location.origin}${window.location.pathname}`;
+            
+            navigator.clipboard.writeText(citation).then(() => {
+                alert('Citation copied to clipboard:\n\n' + citation);
+            }).catch(() => {
+                prompt('Copy this citation:', citation);
+            });
+        };
+
+        window.shareCurrentView = function() {
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            const filter = window.currentFilter || 'all';
+            const search = document.getElementById('search-input')?.value || '';
+            
+            const params = new URLSearchParams({
+                lat: center.lat.toFixed(4),
+                lon: center.lng.toFixed(4),
+                zoom: zoom,
+                filter: filter,
+                search: search
+            });
+            
+            const shareUrl = `${window.location.origin}${window.location.pathname}#${params.toString()}`;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const originalText = event.target?.innerHTML || '';
+                const btn = event.target;
+                if (btn) btn.innerHTML = '✅ Copied!';
+                
+                // Show toast
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#198754;color:white;padding:10px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+                toast.innerHTML = 'Link copied to clipboard!';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 0.4s';
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 400);
+                }, 2200);
+                
+                if (btn) setTimeout(() => btn.innerHTML = originalText || 'Share View', 2000);
+            }).catch(() => {
+                // Fallback: show prompt
+                prompt('Copy this link:', shareUrl);
+            });
+        };
+
+        // Load state from URL hash on page load
+        function loadFromUrlHash() {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return;
+            
+            const params = new URLSearchParams(hash);
+            const lat = parseFloat(params.get('lat'));
+            const lon = parseFloat(params.get('lon'));
+            const zoom = parseInt(params.get('zoom'));
+            const filter = params.get('filter');
+            const search = params.get('search');
+            
+            setTimeout(() => {
+                if (lat && lon && zoom && map) {
+                    map.flyTo([lat, lon], zoom, { duration: 0.6 });
+                }
+                
+                if (filter && filter !== 'all') {
+                    filterMarkers(filter);
+                }
+                
+                if (search) {
+                    const input = document.getElementById('search-input');
+                    if (input) {
+                        input.value = search;
+                        filterBySearch(search);
+                    }
+                }
+            }, 800);
+        }
+
+        window.exportMapAsImage = function() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return alert('Map not found');
+            
+            // Temporarily hide popups and controls for clean export
+            const popups = document.querySelectorAll('.leaflet-popup');
+            popups.forEach(p => p.style.display = 'none');
+            
+            html2canvas(mapContainer, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false
+            }).then(canvas => {
+                // Restore popups
+                popups.forEach(p => p.style.display = '');
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = 'forensic-taphonomy-map.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                popups.forEach(p => p.style.display = '');
+                alert('Export failed. You can use your browser\'s screenshot tool instead.');
+                console.error(err);
+            });
+        };
+
         function resetMapView() {
             if (map && markersLayer) {
                 const bounds = markersLayer.getBounds();
                 if (bounds.isValid()) map.flyToBounds(bounds.pad(0.2), { duration: 0.7 });
+            }
+        }
+
+        // Dark Mode Toggle
+        window.toggleDarkMode = function() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-mode');
+            
+            if (isDark) {
+                body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'false');
+                document.getElementById('dark-mode-icon').innerHTML = '🌙';
+                // Switch map to light tiles
+                if (window.map) {
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.TileLayer) map.removeLayer(layer);
+                    });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors | Forensic Taphonomy Map 2026'
+                    }).addTo(map);
+                }
+            } else {
+                body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+                document.getElementById('dark-mode-icon').innerHTML = '☀️';
+                // Switch map to dark tiles
+                if (window.map) {
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.TileLayer) map.removeLayer(layer);
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; OpenStreetMap contributors &copy; CARTO | Forensic Taphonomy Map 2026'
+                    }).addTo(map);
+                }
+            }
+        };
+
+        // Load dark mode preference
+        function loadDarkModePreference() {
+            const savedMode = localStorage.getItem('darkMode');
+            if (savedMode === 'true') {
+                document.body.classList.add('dark-mode');
+                const icon = document.getElementById('dark-mode-icon');
+                if (icon) icon.innerHTML = '☀️';
+            }
+        }
+
+        function zoomToFacility(index) {
+            const fac = facilitiesData[index];
+            if (map && fac.lat && fac.lon) {
+                map.flyTo([fac.lat, fac.lon], 11, {
+                    duration: 0.8,
+                    easeLinearity: 0.25
+                });
+                // Close popup after zooming
+                setTimeout(() => {
+                    map.closePopup();
+                }, 900);
             }
         }
 
@@ -609,6 +1601,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initMap();
             populateDirectory();
+            loadDarkModePreference();
             
             // Keyboard shortcut: press '/' to reset map
             document.addEventListener('keydown', function(e) {
