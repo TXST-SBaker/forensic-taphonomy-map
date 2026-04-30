@@ -8,7 +8,7 @@ Live Demo: https://TXST-SBaker.github.io/forensic-taphonomy-map/
 
 ## What This Site Shows
 
-This website visualizes all known dedicated human taphonomy (forensic decomposition) research facilities as of April 2026. These secure outdoor laboratories study how human remains decompose under different climates and conditions — critical work for forensic science, law enforcement training, missing persons identification, and disaster victim recovery.
+This website visualizes all known dedicated human taphonomy (forensic decomposition) research facilities as of April 2026. These secure outdoor laboratories study how human remains decompose under different climates and conditions. This research is vital to forensic science, supports law enforcement training, aids in identifying missing persons, and improves disaster response and recovery efforts.
 
 ### Facilities Included (13 total)
 
