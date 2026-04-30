@@ -1,8 +1,8 @@
 # 🌍 Global Forensic Taphonomy Facilities Map
 
-Interactive map of **13 active human decomposition research facilities** ("body farms") worldwide.
+Interactive map of **13 active human decomposition research facilities** worldwide.
 
-**Live Demo:** https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/
+Live Demo: https://TXST-SBaker.github.io/forensic-taphonomy-map/
 
 ---
 
@@ -23,7 +23,7 @@ This website visualizes all known dedicated human taphonomy (forensic decomposit
 - Current & historical directors
 - Establishment date
 - Body donation program links
-- Donor metrics & ethics notes
+- Donor statistics & ethics notes
 - Published research highlights
 - Size, climate, and unique features
 - Contact information
@@ -34,8 +34,8 @@ This website visualizes all known dedicated human taphonomy (forensic decomposit
 
 - 🗺️ **Interactive Leaflet map** with color-coded markers by region
 - 📍 Click any marker for quick info + "Full Details" button
-- 📋 Complete directory with searchable cards
-- 📊 Rich modal windows with full data (directors, studies, climate, contacts)
+- 📋 Complete facility information with searchable cards
+- 📊 Rich modal windows with full data (directors, published articles, climate, contacts)
 - 📱 Fully responsive (works great on mobile)
 - ⚡ Self-contained single HTML file — no backend required
 
@@ -47,7 +47,6 @@ This website visualizes all known dedicated human taphonomy (forensic decomposit
 2. **View details** — Click "Full Details" in any popup or directory card
 3. **Reset view** — Use the "Reset View" button or press `/` on your keyboard
 
-All facilities are **secure and closed to the public**. Visits are by appointment only for qualified researchers and law enforcement.
 
 ---
 
