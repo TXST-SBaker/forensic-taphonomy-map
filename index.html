@@ -165,6 +165,20 @@
                             <button class="btn btn-sm btn-outline-secondary" onclick="showAnimatedTimeline()">Timeline</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="printReport()">Print Report</button>
                             <button class="btn btn-sm btn-outline-primary" onclick="downloadCSV()">Download CSV</button>
+                            
+                            <!-- Weather Overlay Toggles -->
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Weather layers">
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('temp')" id="weather-temp-btn" title="Temperature">
+                                    🌡️ Temp
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('precip')" id="weather-precip-btn" title="Precipitation">
+                                    💧 Rain
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('clouds')" id="weather-clouds-btn" title="Clouds">
+                                    ☁️ Clouds
+                                </button>
+                            </div>
+                            
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">Help</button>
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#legendModal">Legend</button>
                         </div>
@@ -173,7 +187,7 @@
                         <div id="map"></div>
                     </div>
                     <div class="card-footer small text-muted py-2">
-                        Zoom/pan to explore. Markers colored by region. Data from official sites, Wikipedia, peer-reviewed papers (2025-2026). All facilities secure &amp; appointment-only.
+                        Zoom/pan to explore. Markers colored by region. <strong>Weather:</strong> Click 🌡️/💧/☁️ for temperature, precipitation, or clouds (requires free OpenWeatherMap API key). Data from official sites, Wikipedia, peer-reviewed papers (2025-2026). All facilities secure &amp; appointment-only.
                     </div>
                 </div>
             </div>
@@ -575,6 +589,16 @@
                                 <li><strong>Download CSV</strong> — Full dataset for research</li>
                             </ul>
                         </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">🌡️ Weather Overlays</h6>
+                            <ul class="mb-0">
+                                <li><strong>🌡️ Temp</strong> — Temperature overlay</li>
+                                <li><strong>💧 Rain</strong> — Precipitation overlay</li>
+                                <li><strong>☁️ Clouds</strong> — Cloud cover overlay</li>
+                                <li><strong>Note:</strong> Requires free OpenWeatherMap API key (get at openweathermap.org/api)</li>
+                            </ul>
+                        </div>
                     </div>
                     
                     <div class="alert alert-light small mt-3 mb-0">
@@ -886,6 +910,12 @@
 
             markersLayer = L.layerGroup().addTo(map);
             
+            // Weather layers (OpenWeatherMap - get free API key at https://openweathermap.org/api)
+            // NOTE: Replace 'YOUR_OPENWEATHERMAP_API_KEY' with your free API key
+            const WEATHER_API_KEY = '83ea5014d4b47a230d353988b5e2d653'; // Get free key: https://openweathermap.org/api
+            window.weatherLayers = {};
+            window.activeWeatherLayer = null;
+            
             // Store all markers for filtering
             window.allMarkers = [];
             window.currentFilter = 'all';
@@ -1157,6 +1187,78 @@
             }, 400);
         };
 
+        // Weather Layer Toggle (OpenWeatherMap)
+        window.toggleWeatherLayer = function(layerType) {
+            // Check if API key is set
+            if (WEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
+                alert('⚠️ Weather layers require a free OpenWeatherMap API key.\n\nGet one at: https://openweathermap.org/api\n\nThen replace YOUR_OPENWEATHERMAP_API_KEY in the code.');
+                return;
+            }
+            
+            const layerUrls = {
+                'temp': `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`,
+                'precip': `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`,
+                'clouds': `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`
+            };
+            
+            const layerNames = {
+                'temp': 'Temperature',
+                'precip': 'Precipitation',
+                'clouds': 'Clouds'
+            };
+            
+            // Remove existing weather layer if active
+            if (window.activeWeatherLayer) {
+                map.removeLayer(window.activeWeatherLayer);
+                window.activeWeatherLayer = null;
+                
+                // Reset all weather buttons
+                document.querySelectorAll('[id^="weather-"]').forEach(btn => {
+                    btn.classList.remove('active', 'btn-info');
+                    btn.classList.add('btn-outline-info');
+                });
+            }
+            
+            // If clicking the same layer, just turn it off
+            if (window.activeWeatherLayer && window.activeWeatherLayer._url && window.activeWeatherLayer._url.includes(layerType)) {
+                return;
+            }
+            
+            // Add new weather layer
+            const weatherLayer = L.tileLayer(layerUrls[layerType], {
+                attribution: 'Weather data © OpenWeatherMap',
+                opacity: 0.6,
+                zIndex: 1
+            });
+            
+            weatherLayer.addTo(map);
+            window.activeWeatherLayer = weatherLayer;
+            
+            // Update button states
+            document.querySelectorAll('[id^="weather-"]').forEach(btn => {
+                btn.classList.remove('active', 'btn-info');
+                btn.classList.add('btn-outline-info');
+            });
+            
+            const activeBtn = document.getElementById(`weather-${layerType}-btn`);
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-outline-info');
+                activeBtn.classList.add('active', 'btn-info');
+            }
+            
+            // Show notification
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0dcaf0;color:white;padding:8px 16px;border-radius:6px;font-size:0.85rem;z-index:9999';
+            toast.innerHTML = `🌡️ Showing ${layerNames[layerType]} overlay`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        };
+        
         // Print / PDF Report
         // Download CSV
         window.downloadCSV = function() {
