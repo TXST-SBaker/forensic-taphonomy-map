@@ -958,7 +958,6 @@
                 marker.bindPopup(popupHtml, { maxWidth: 320, minWidth: 280, className: 'custom-popup' });
 
                 // Enhanced hover tooltip with name + country
-                const shortName = fac.name.split('(')[0].trim();
                 const country = fac.location.split(',').pop().trim();
                 marker.bindTooltip(`${shortName} • ${country}`, {
                     permanent: false,
