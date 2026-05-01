@@ -7,88 +7,318 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; }
-        #map { height: 65vh; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .facility-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .facility-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-        .popup-content { font-size: 0.9rem; line-height: 1.45; max-width: 320px; }
-        .modal-body { max-height: 70vh; overflow-y: auto; font-size: 0.95rem; }
-        .stat-badge { font-size: 0.8rem; padding: 0.35em 0.6em; }
-        .section-header { border-bottom: 3px solid #0d6efd; padding-bottom: 0.4rem; margin-bottom: 1rem; color: #0d6efd; font-weight: 600; }
-        .data-table td { padding: 0.4rem 0.6rem; vertical-align: top; }
-        .data-table th { width: 38%; padding: 0.4rem 0.6rem; background: #f1f3f5; }
-        .legend { background: white; padding: 12px 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 0.85rem; }
-        .leaflet-popup-content-wrapper { border-radius: 10px; }
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #f8f9fa; 
+        }
+        
+        /* ========== MAP CONTAINER ========== */
+        #map { 
+            height: 65vh; 
+            border-radius: 16px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12),
+                        0 4px 16px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+        }
+        
+        #map:hover {
+            box-shadow: 0 12px 48px rgba(0,0,0,0.15),
+                        0 6px 24px rgba(0,0,0,0.1);
+        }
+        
+        .map-tiles {
+            filter: contrast(1.05) saturate(1.1);
+        }
+        
+        /* ========== ENHANCED BUTTONS ========== */
+        .btn-group-sm .btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            border-radius: 6px;
+        }
+        
+        .btn-group-sm .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-group-sm .btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Weather Buttons */
+        .btn-outline-info {
+            border-color: #0dcaf0;
+            color: #0dcaf0;
+        }
+        
+        .btn-outline-info:hover,
+        .btn-outline-info.active {
+            background-color: #0dcaf0;
+            border-color: #0dcaf0;
+            color: white;
+            box-shadow: 0 4px 12px rgba(13, 202, 240, 0.4);
+        }
+        
+        /* 3D View Button */
+        .btn-outline-primary {
+            border-color: #0d6efd;
+            color: #0d6efd;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+        }
+        
+        /* Test Button */
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #000;
+        }
+        
+        .btn-warning:hover {
+            background-color: #ffca2c;
+            border-color: #ffc720;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+        }
+        
+        /* ========== LEGEND ========== */
+        .info.legend {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+        
+        .info.legend:hover {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        /* ========== POPUPS & TOOLTIPS ========== */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .custom-popup {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
         .custom-tooltip {
             background: #1f2937;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.85rem;
-            padding: 4px 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            padding: 6px 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
             font-weight: 500;
         }
+        
         .custom-tooltip::before {
             border-top-color: #1f2937 !important;
         }
-        .info.legend {
-            box-shadow: none !important;
-            background: transparent !important;
+        
+        /* ========== FACILITY CARDS ========== */
+        .facility-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0,0,0,0.06);
+            overflow: hidden;
+            animation: fadeInUp 0.4s ease-out backwards;
         }
         
-        /* Mobile-optimized popups */
-        @media (max-width: 576px) {
-            .leaflet-popup-content {
-                font-size: 0.9rem !important;
+        .facility-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            border-color: rgba(0,0,0,0.1);
+        }
+        
+        .facility-card .card-body {
+            padding: 1.25rem;
+        }
+        
+        .facility-card .card-footer {
+            background: linear-gradient(to right, #f8f9fa, #fff);
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+        
+        /* Staggered card animations */
+        .facility-card:nth-child(2) { animation-delay: 0.05s; }
+        .facility-card:nth-child(3) { animation-delay: 0.1s; }
+        .facility-card:nth-child(4) { animation-delay: 0.15s; }
+        .facility-card:nth-child(5) { animation-delay: 0.2s; }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
-            .leaflet-popup-content-wrapper {
-                max-width: 92vw !important;
-            }
-            .popup-content .d-flex {
-                flex-direction: column !important;
-                gap: 6px !important;
-            }
-            .popup-content .d-flex .btn {
-                width: 100% !important;
-                margin-bottom: 2px;
-            }
-            .popup-content img {
-                height: 110px !important;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
         
-        /* Dark Mode Styles */
+        /* ========== MODALS ========== */
+        .modal-content {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            padding: 1rem 1.25rem;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid rgba(0,0,0,0.08);
+            background: #f8f9fa;
+        }
+        
+        /* ========== DARK MODE ENHANCEMENTS ========== */
         body.dark-mode {
             background-color: #121212 !important;
             color: #e0e0e0 !important;
         }
+        
         body.dark-mode .card,
         body.dark-mode .modal-content {
             background-color: #1e1e1e !important;
             border-color: #333 !important;
             color: #e0e0e0 !important;
         }
+        
         body.dark-mode .card-header,
         body.dark-mode .modal-header {
             background-color: #2a2a2a !important;
             border-color: #444 !important;
         }
+        
+        body.dark-mode #map {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid #333;
+        }
+        
+        body.dark-mode .info.legend {
+            background: rgba(30,30,30,0.95);
+            border: 1px solid #444;
+        }
+        
+        body.dark-mode .facility-card {
+            background-color: #1e1e1e;
+            border-color: #333;
+        }
+        
+        body.dark-mode .facility-card:hover {
+            border-color: #555;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
         body.dark-mode .text-muted {
             color: #aaa !important;
         }
+        
         body.dark-mode .form-control {
             background-color: #2a2a2a !important;
             border-color: #555 !important;
             color: #e0e0e0 !important;
         }
+        
         body.dark-mode .btn-outline-dark {
             color: #e0e0e0 !important;
             border-color: #555 !important;
         }
+        
         body.dark-mode .btn-outline-dark.active {
             background-color: #444 !important;
             border-color: #666 !important;
+        }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            #map {
+                height: 55vh;
+                border-radius: 12px;
+            }
+            
+            .btn-group-sm .btn {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            .facility-card {
+                margin-bottom: 1rem;
+            }
+            
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #map {
+                height: 60vh;
+            }
+        }
+        
+        /* ========== TOAST NOTIFICATIONS ========== */
+        .toast-notification {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 20px);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+        
+        /* ========== SECTION HEADERS ========== */
+        .section-header {
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 0.4rem;
+            margin-bottom: 1rem;
+            color: #0d6efd;
+            font-weight: 600;
+        }
+        
+        /* ========== DATA TABLES ========== */
+        .data-table td {
+            padding: 0.4rem 0.6rem;
+            vertical-align: top;
+        }
+        
+        .data-table th {
+            width: 38%;
+            padding: 0.4rem 0.6rem;
+            background: #f1f3f5;
+            font-weight: 600;
+        }
+        
+        body.dark-mode .data-table th {
+            background: #2a2a2a;
         }
     </style>
 </head>
@@ -177,17 +407,44 @@
                                 <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('clouds')" id="weather-clouds-btn" title="Clouds">
                                     ☁️ Clouds
                                 </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('wind')" id="weather-wind-btn" title="Wind">
+                                    🌬️ Wind
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleWeatherLayer('pressure')" id="weather-pressure-btn" title="Pressure">
+                                    📊 Pressure
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="clearWeatherLayers()" title="Clear all weather layers">
+                                    🗑️ Clear
+                                </button>
+                            </div>
+                            
+                            <!-- Base Layer Switcher -->
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Base map layers">
+                                <button class="btn btn-sm btn-outline-dark active" onclick="switchBaseLayer('street')" id="base-street-btn" title="Street Map">
+                                    🗺️ Street
+                                </button>
+                                <button class="btn btn-sm btn-outline-dark" onclick="switchBaseLayer('satellite')" id="base-satellite-btn" title="Satellite Imagery">
+                                    🛰️ Satellite
+                                </button>
+                                <button class="btn btn-sm btn-outline-dark" onclick="switchBaseLayer('terrain')" id="base-terrain-btn" title="Terrain & Elevation">
+                                    ⛰️ Terrain
+                                </button>
                             </div>
                             
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#helpModal">Help</button>
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#legendModal">Legend</button>
+                            
+                            <!-- 3D Terrain View Button -->
+                            <button class="btn btn-sm btn-outline-primary" onclick="show3DView()" title="View facilities in 3D terrain">
+                                ⛰️ 3D View
+                            </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div id="map"></div>
                     </div>
                     <div class="card-footer small text-muted py-2">
-                        Zoom/pan to explore. Markers colored by region. <strong>Weather:</strong> Click 🌡️/💧/☁️ for temperature, precipitation, or clouds (requires free OpenWeatherMap API key). Data from official sites, Wikipedia, peer-reviewed papers (2025-2026). All facilities secure &amp; appointment-only.
+                        Zoom/pan to explore. <strong>Base Layers:</strong> 🗺️ Street / 🛰️ Satellite / ⛰️ Terrain. <strong>⛰️ 3D View</strong> for interactive terrain. <strong>Weather:</strong> 🌡️/💧/☁️/🌬️/📊. <strong>🗑️ Clear</strong> removes weather. Data from official sites, peer-reviewed papers (2025-2026).
                     </div>
                 </div>
             </div>
@@ -540,6 +797,30 @@
         </div>
     </div>
 
+    <!-- 3D Terrain View Modal -->
+    <div class="modal fade" id="modal3D" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fw-semibold">⛰️ 3D Terrain View - Forensic Taphonomy Facilities</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="map-3d" style="height: 70vh; width: 100%;"></div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <small class="text-muted">
+                            <strong>Terrain:</strong> MapTiler (exaggeration: 1.5x) | 
+                            <strong>Tip:</strong> Drag to rotate • Scroll to zoom • Right-click to tilt
+                        </small>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Help / How to Use Modal -->
     <div class="modal fade" id="helpModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -596,7 +877,29 @@
                                 <li><strong>🌡️ Temp</strong> — Temperature overlay</li>
                                 <li><strong>💧 Rain</strong> — Precipitation overlay</li>
                                 <li><strong>☁️ Clouds</strong> — Cloud cover overlay</li>
+                                <li><strong>🌬️ Wind</strong> — Wind speed overlay</li>
+                                <li><strong>📊 Pressure</strong> — Atmospheric pressure overlay</li>
+                                <li><strong>🗑️ Clear</strong> — Remove all weather layers</li>
                                 <li><strong>Note:</strong> Requires free OpenWeatherMap API key (get at openweathermap.org/api)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">🗺️ Base Map Layers</h6>
+                            <ul class="mb-0">
+                                <li><strong>🗺️ Street</strong> — OpenStreetMap street view (default)</li>
+                                <li><strong>🛰️ Satellite</strong> — High-resolution satellite imagery (Esri)</li>
+                                <li><strong>⛰️ Terrain</strong> — Topographic map with elevation contours (OpenTopoMap)</li>
+                                <li><strong>Tip:</strong> Use Terrain to see elevation effects on decomposition rates; Satellite for site context</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold">⛰️ 3D Terrain View</h6>
+                            <ul class="mb-0">
+                                <li><strong>⛰️ 3D View</strong> — Interactive 3D terrain with MapLibre</li>
+                                <li><strong>Controls:</strong> Drag to rotate • Scroll to zoom • Right-click + drag to tilt</li>
+                                <li><strong>Note:</strong> Requires free MapTiler API key (get at maptiler.com)</li>
                             </ul>
                         </div>
                     </div>
@@ -618,6 +921,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         const facilitiesData = [
@@ -911,8 +1216,7 @@
             markersLayer = L.layerGroup().addTo(map);
             
             // Weather layers (OpenWeatherMap - get free API key at https://openweathermap.org/api)
-            // NOTE: Replace 'YOUR_OPENWEATHERMAP_API_KEY' with your free API key
-            const WEATHER_API_KEY = '83ea5014d4b47a230d353988b5e2d653'; // Get free key: https://openweathermap.org/api
+            window.WEATHER_API_KEY = '06feaa643eafd7562f634c6baa8f755f'; // Your OpenWeatherMap API key
             window.weatherLayers = {};
             window.activeWeatherLayer = null;
             
@@ -1189,22 +1493,32 @@
 
         // Weather Layer Toggle (OpenWeatherMap)
         window.toggleWeatherLayer = function(layerType) {
-            // Check if API key is set
-            if (WEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
+            // Ensure map is ready
+            if (!map) {
+                alert('Map not ready. Please wait and try again.');
+                return;
+            }
+            
+            // Check if API key is the placeholder (not set yet)
+            if (window.WEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
                 alert('⚠️ Weather layers require a free OpenWeatherMap API key.\n\nGet one at: https://openweathermap.org/api\n\nThen replace YOUR_OPENWEATHERMAP_API_KEY in the code.');
                 return;
             }
             
             const layerUrls = {
-                'temp': `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`,
-                'precip': `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`,
-                'clouds': `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${WEATHER_API_KEY}`
+                'temp': `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${window.WEATHER_API_KEY}`,
+                'precip': `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${window.WEATHER_API_KEY}`,
+                'clouds': `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${window.WEATHER_API_KEY}`,
+                'wind': `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${window.WEATHER_API_KEY}`,
+                'pressure': `https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${window.WEATHER_API_KEY}`
             };
             
             const layerNames = {
                 'temp': 'Temperature',
                 'precip': 'Precipitation',
-                'clouds': 'Clouds'
+                'clouds': 'Clouds',
+                'wind': 'Wind',
+                'pressure': 'Pressure'
             };
             
             // Remove existing weather layer if active
@@ -1258,6 +1572,239 @@
                 setTimeout(() => toast.remove(), 300);
             }, 2000);
         };
+        
+        // Clear all weather layers
+        window.clearWeatherLayers = function() {
+            if (window.activeWeatherLayer) {
+                map.removeLayer(window.activeWeatherLayer);
+                window.activeWeatherLayer = null;
+                
+                // Reset all weather buttons
+                document.querySelectorAll('[id^="weather-"]').forEach(btn => {
+                    btn.classList.remove('active', 'btn-info');
+                    btn.classList.add('btn-outline-info');
+                });
+                
+                // Show notification
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#6c757d;color:white;padding:8px 16px;border-radius:6px;font-size:0.85rem;z-index:9999';
+                toast.innerHTML = '🗑️ Weather layers cleared';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 0.3s';
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 1500);
+            }
+        };
+        
+        // Switch Base Layer (Street vs Satellite)
+        window.switchBaseLayer = function(layerType) {
+            // Remove existing base layer
+            map.eachLayer(function(layer) {
+                if (layer instanceof L.TileLayer && !layer._url.includes('openweathermap')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            let newLayer;
+            let layerName;
+            
+            if (layerType === 'street') {
+                newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors | Forensic Taphonomy Map 2026',
+                    maxZoom: 18
+                });
+                layerName = 'Street Map';
+            } else if (layerType === 'satellite') {
+                // Esri World Imagery - Free high-resolution satellite imagery
+                newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                    maxZoom: 18
+                });
+                layerName = 'Satellite Imagery';
+            } else if (layerType === 'terrain') {
+                // OpenTopoMap - Shows contour lines and elevation data
+                newLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+                    maxZoom: 17
+                });
+                layerName = 'Terrain & Elevation';
+            }
+            
+            newLayer.addTo(map);
+            
+            // Update button states
+            document.querySelectorAll('[id^="base-"]').forEach(btn => {
+                btn.classList.remove('active', 'btn-dark');
+                btn.classList.add('btn-outline-dark');
+            });
+            
+            const activeBtn = document.getElementById(`base-${layerType}-btn`);
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-outline-dark');
+                activeBtn.classList.add('active', 'btn-dark');
+            }
+            
+            // Show notification
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#198754;color:white;padding:8px 16px;border-radius:6px;font-size:0.85rem;z-index:9999';
+            toast.innerHTML = `🗺️ Switched to ${layerName}`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 1500);
+        };
+        
+        // 3D Terrain View with MapLibre
+        let map3D = null;
+        
+        window.show3DView = function() {
+            const modal = new bootstrap.Modal(document.getElementById('modal3D'));
+            modal.show();
+            
+            setTimeout(() => {
+                if (!map3D) {
+                    init3DMap();
+                } else {
+                    // Resize map if modal was already opened
+                    map3D.resize();
+                }
+            }, 600);
+        };
+        
+        // Test 3D Function - Debug helper
+        window.test3D = function() {
+            console.log('🧪 Testing 3D view...');
+            console.log('MapTiler Key:', 'luAmn0Fj4yF6ggLWoCZm');
+            
+            try {
+                const modal = new bootstrap.Modal(document.getElementById('modal3D'));
+                modal.show();
+                
+                setTimeout(() => {
+                    if (typeof maplibregl === 'undefined') {
+                        console.error('❌ MapLibre GL JS not loaded!');
+                        alert('MapLibre library not loaded. Check if the script tag is correct.');
+                    } else {
+                        console.log('✅ MapLibre GL JS loaded');
+                        if (!map3D) {
+                            console.log('Initializing 3D map...');
+                            init3DMap();
+                        } else {
+                            console.log('3D map already initialized');
+                        }
+                    }
+                }, 500);
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Error: ' + e.message);
+            }
+        };
+        
+        function init3DMap() {
+            // MapTiler API Key - Free tier: 100K views/month
+            const MAPTILER_KEY = 'luAmn0Fj4yF6ggLWoCZm';
+            
+            if (MAPTILER_KEY === 'YOUR_MAPTILER_KEY') {
+                document.getElementById('map-3d').innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:center; height:100%; background:#f8f9fa; flex-direction:column; padding:40px;">
+                        <h4 style="color:#dc3545;">⚠️ MapTiler API Key Required</h4>
+                        <p style="max-width:500px; text-align:center; color:#666;">
+                            To enable 3D terrain view, please:
+                        </p>
+                        <ol style="text-align:left; max-width:400px; color:#666;">
+                            <li>Go to <a href="https://www.maptiler.com/" target="_blank">maptiler.com</a></li>
+                            <li>Sign up for a free account (if needed)</li>
+                            <li>Get your API key from dashboard</li>
+                            <li>Replace the key in the code if you get a new one</li>
+                        </ol>
+                        <p style="margin-top:20px; color:#666;">
+                            <small>Free tier includes 100,000 map views/month</small>
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            map3D = new maplibregl.Map({
+                container: 'map-3d',
+                style: `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`,
+                center: [25, 15],
+                zoom: 2,
+                pitch: 60,
+                bearing: -20,
+                maxPitch: 85
+            });
+            
+            map3D.on('load', () => {
+                // Add 3D terrain
+                map3D.addSource('terrain', {
+                    type: 'raster-dem',
+                    url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${MAPTILER_KEY}`,
+                    tileSize: 512,
+                    maxzoom: 14
+                });
+                
+                map3D.setTerrain({ source: 'terrain', exaggeration: 1.5 });
+                
+                // Add facility markers
+                facilitiesData.forEach((fac, index) => {
+                    const el = document.createElement('div');
+                    el.className = 'marker-3d';
+                    el.style.cssText = `
+                        width: 14px; 
+                        height: 14px; 
+                        background: ${getMarkerColor(fac.name, fac.location)}; 
+                        border: 2px solid white; 
+                        border-radius: 50%; 
+                        cursor: pointer;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    `;
+                    
+                    const shortName = fac.name.split('(')[0].trim();
+                    
+                    new maplibregl.Marker(el)
+                        .setLngLat([fac.lon, fac.lat])
+                        .setPopup(new maplibregl.Popup({ offset: 15 }).setHTML(`
+                            <div style="min-width:200px;">
+                                <strong style="font-size:0.95rem;">${shortName}</strong><br>
+                                <small style="color:#666;">${fac.location}</small><br>
+                                <small style="color:#666;">Director: ${fac.director.split('(')[0].trim()}</small><br>
+                                <hr style="margin:6px 0;">
+                                <small><strong>Climate:</strong> ${fac.climate.split(';')[0]}</small>
+                            </div>
+                        `))
+                        .addTo(map3D);
+                });
+                
+                // Add navigation controls
+                map3D.addControl(new maplibregl.NavigationControl(), 'top-right');
+                
+                // Show initial toast
+                setTimeout(() => {
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:8px 16px;border-radius:6px;font-size:0.85rem;z-index:1000;';
+                    toast.innerHTML = '🗺️ Drag to rotate • Scroll to zoom • Right-click + drag to tilt';
+                    document.getElementById('map-3d').appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.style.transition = 'opacity 0.5s';
+                        toast.style.opacity = '0';
+                        setTimeout(() => toast.remove(), 500);
+                    }, 3000);
+                }, 1000);
+            });
+            
+            // Handle modal close - resize map
+            document.getElementById('modal3D').addEventListener('hidden.bs.modal', () => {
+                if (map3D) map3D.resize();
+            });
+        }
         
         // Print / PDF Report
         // Download CSV
