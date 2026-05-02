@@ -6,6 +6,7 @@
     <title>Global Forensic Decomposition Facilities Map | Interactive Taphonomy Research Sites</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body { 
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -364,6 +365,16 @@
         .leaflet-control-northarrow svg {
             transition: transform 0.3s ease;
         }
+
+        /* Weather Station Markers */
+        .weather-station-marker {
+            font-size: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        .weather-station-marker:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
@@ -433,6 +444,12 @@
                             <button class="btn btn-sm btn-outline-info" onclick="shareCurrentView()">Share View</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="citeThisMap()">Cite</button>
                             <button class="btn btn-sm btn-outline-info" onclick="showClimateInfo()">Climate Info</button>
+                            <button class="btn btn-sm btn-outline-dark" id="station-toggle-btn" onclick="toggleWeatherStations()" title="Show/hide NOAA weather stations">
+                                📍 Stations
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showHistoricalWeather()" title="Query historical weather from NOAA">
+                                📅 Historical Weather
+                            </button>
                             <button class="btn btn-sm btn-outline-primary" onclick="showHistoricalView()">Historical</button>
                             <button class="btn btn-sm btn-outline-dark" onclick="showComparisonTool()">Compare</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="findNearbyFacilities()">Nearby</button>
@@ -689,6 +706,124 @@
                         World Meteorological Organization (WMO) Station Data • 
                         WorldClim 2.1 Bioclimatic Variables (1970–2000)
                     </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Weather Modal -->
+    <div class="modal fade" id="historicalWeatherModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fw-semibold">📅 Historical Weather Lookup</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small py-2">
+                        <strong>Data Source:</strong> NOAA NCEI Climate Data Online (GHCND) • 
+                        <strong>Token:</strong> Your NOAA API key
+                    </div>
+                    
+                    <div class="row g-3">
+                        <!-- Facility Selector -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Select Facility</label>
+                            <select class="form-select form-select-sm" id="hist-facility">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <!-- Date Range -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" id="hist-start" value="2020-01-01">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">End Date</label>
+                            <input type="date" class="form-control form-control-sm" id="hist-end" value="2020-12-31">
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary btn-sm mt-3" onclick="fetchHistoricalWeather()">
+                        <span id="hist-btn-text">Query NOAA Data</span>
+                    </button>
+                    
+                    <!-- Loading Indicator -->
+                    <div id="hist-loading" class="mt-3" style="display:none;">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        <span class="small">Querying NOAA Climate Data Online...</span>
+                    </div>
+                    
+                    <!-- Results Display -->
+                    <div id="hist-results" class="mt-4" style="display:none;">
+                        <h6 class="fw-bold">Weather Summary</h6>
+                        
+                        <!-- Summary Cards -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <div class="text-muted small">Avg Temperature</div>
+                                        <div class="h5 mb-0" id="hist-temp">--°C</div>
+                                        <div class="small text-muted" id="hist-temp-range"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <div class="text-muted small">Total Precipitation</div>
+                                        <div class="h5 mb-0" id="hist-precip">-- mm</div>
+                                        <div class="small text-muted" id="hist-precip-days"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <div class="text-muted small">Avg Wind Speed</div>
+                                        <div class="h5 mb-0" id="hist-wind">-- m/s</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-header py-1 px-2">
+                                        <small class="fw-bold">Temperature Trend (°C)</small>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <canvas id="temp-chart" height="60"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-header py-1 px-2">
+                                        <small class="fw-bold">Daily Precipitation (mm)</small>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <canvas id="precip-chart" height="50"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <small class="text-muted">
+                                <strong>Station:</strong> <span id="hist-station"></span><br>
+                                <strong>Period:</strong> <span id="hist-period"></span><br>
+                                <strong>Source:</strong> NOAA NCEI Global Historical Climatology Network Daily (GHCND)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <small class="text-muted">Data from NOAA National Centers for Environmental Information (NCEI)</small>
                 </div>
             </div>
         </div>
@@ -1982,6 +2117,261 @@
             printWindow.document.write(html);
             printWindow.document.close();
             setTimeout(() => printWindow.print(), 500);
+        };
+
+        // NOAA Historical Weather Functions
+        const NOAA_TOKEN = 'zbIhKxqemtBSzVrCJvmkqgelIElOlZuT';
+
+        const facilityStations = {
+            'Knoxville, Tennessee': 'USW00013891',
+            'San Marcos, Texas': 'USW00012921',
+            'Grand Junction, Colorado': 'USW00023066',
+            'Huntsville, Texas': 'USW00012923',
+            'Carbondale, Illinois': 'USW00093810',
+            'Tampa, Florida': 'USW00012842',
+            'Cullowhee, North Carolina': 'USW00053872',
+            'Baton Rouge, Louisiana': 'USW00013970',
+            'Longwood, Florida': 'USW00012854',
+            'Beaumont, Texas': 'USW00012905',
+            'Sydney, Australia': 'ASN00066037',
+            'Montreal, Quebec': 'CA006158350',
+            'Amsterdam, Netherlands': 'NLM00006240'
+        };
+
+        // Weather Station Coordinates (approximate)
+        const weatherStations = {
+            'USW00013891': { name: 'Knoxville McGhee Tyson Airport', lat: 35.8106, lon: -83.9940, distance: '12 km from UTK ARF' },
+            'USW00012921': { name: 'Austin-Camp Mabry', lat: 30.3167, lon: -97.7667, distance: '45 km from Texas State' },
+            'USW00023066': { name: 'Grand Junction Walker Field', lat: 39.1224, lon: -108.5267, distance: '8 km from Colorado Mesa' },
+            'USW00012923': { name: 'Huntsville, TX', lat: 30.7235, lon: -95.5508, distance: '5 km from STAFS' },
+            'USW00093810': { name: 'Carbondale, IL', lat: 37.7267, lon: -89.2167, distance: '8 km from SIU' },
+            'USW00012842': { name: 'Tampa International', lat: 27.9755, lon: -82.5332, distance: '25 km from USF' },
+            'USW00053872': { name: 'Asheville, NC', lat: 35.4361, lon: -82.5419, distance: '35 km from WCU' },
+            'USW00013970': { name: 'Baton Rouge Ryan Field', lat: 30.5333, lon: -91.1500, distance: '12 km from LSU' },
+            'USW00012854': { name: 'Orlando International', lat: 28.4312, lon: -81.3081, distance: '30 km from UCF' },
+            'USW00012905': { name: 'Beaumont, TX', lat: 29.9500, lon: -94.0167, distance: '15 km from Lamar' },
+            'ASN00066037': { name: 'Sydney Observatory Hill', lat: -33.8597, lon: 151.2047, distance: '25 km from AFTER' },
+            'CA006158350': { name: 'Montreal McGill', lat: 45.5032, lon: -73.5772, distance: '20 km from SSRT' },
+            'NLM00006240': { name: 'Amsterdam Schiphol', lat: 52.3081, lon: 4.7642, distance: '15 km from ARISTA' }
+        };
+
+        let weatherStationMarkers = [];
+
+        window.toggleWeatherStations = function() {
+            if (weatherStationMarkers.length > 0) {
+                weatherStationMarkers.forEach(m => map.removeLayer(m));
+                weatherStationMarkers = [];
+                const btn = document.getElementById('station-toggle-btn');
+                if (btn) {
+                    btn.classList.remove('active', 'btn-dark');
+                    btn.classList.add('btn-outline-dark');
+                }
+            } else {
+                Object.keys(weatherStations).forEach(stationId => {
+                    const station = weatherStations[stationId];
+                    const marker = L.marker([station.lat, station.lon], {
+                        icon: L.divIcon({
+                            className: 'weather-station-marker',
+                            html: '📡',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <div style="min-width:200px;">
+                            <strong>📡 NOAA Weather Station</strong><br>
+                            <small>${station.name}</small><br>
+                            <hr style="margin:6px 0;">
+                            <small><strong>Station ID:</strong> ${stationId}</small><br>
+                            <small><strong>Distance to facility:</strong> ${station.distance}</small><br>
+                            <small><strong>Coordinates:</strong> ${station.lat.toFixed(4)}, ${station.lon.toFixed(4)}</small>
+                        </div>
+                    `);
+                    
+                    weatherStationMarkers.push(marker);
+                });
+                
+                const btn = document.getElementById('station-toggle-btn');
+                if (btn) {
+                    btn.classList.add('active', 'btn-dark');
+                    btn.classList.remove('btn-outline-dark');
+                }
+            }
+        };
+
+        window.showHistoricalWeather = function() {
+            const modal = new bootstrap.Modal(document.getElementById('historicalWeatherModal'));
+            modal.show();
+            
+            const select = document.getElementById('hist-facility');
+            select.innerHTML = '';
+            
+            facilitiesData.forEach((fac, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = fac.name.split('(')[0].trim() + ' - ' + fac.location.split(',')[0];
+                select.appendChild(option);
+            });
+        };
+
+        window.fetchHistoricalWeather = async function() {
+            const facilityIndex = document.getElementById('hist-facility').value;
+            const startDate = document.getElementById('hist-start').value;
+            const endDate = document.getElementById('hist-end').value;
+            
+            if (!facilityIndex || !startDate || !endDate) {
+                alert('Please select a facility and date range');
+                return;
+            }
+            
+            const fac = facilitiesData[parseInt(facilityIndex)];
+            const stationId = facilityStations[fac.location] || 'USW00013891';
+            
+            document.getElementById('hist-loading').style.display = 'block';
+            document.getElementById('hist-results').style.display = 'none';
+            document.getElementById('hist-btn-text').textContent = 'Querying...';
+            
+            // Destroy existing charts if any
+            if (window.tempChart) window.tempChart.destroy();
+            if (window.precipChart) window.precipChart.destroy();
+            
+            try {
+                const url = `https://www.ncei.noaa.gov/cdo-web/api/v2/data?` +
+                    `datasetid=GHCND&stationid=${stationId}&` +
+                    `startdate=${startDate}&enddate=${endDate}&` +
+                    `datatypeid=TAVG,PRCP,AWND&limit=1000`;
+                
+                const response = await fetch(url, {
+                    headers: { 'token': NOAA_TOKEN }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`NOAA API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Process and group by date
+                const dailyData = {};
+                
+                data.results.forEach(record => {
+                    const date = record.date.split('T')[0];
+                    if (!dailyData[date]) dailyData[date] = { temp: null, precip: 0, wind: null };
+                    
+                    if (record.datatype === 'TAVG') {
+                        dailyData[date].temp = (record.value - 32) * 5/9;
+                    }
+                    if (record.datatype === 'PRCP') {
+                        dailyData[date].precip = record.value / 10;
+                    }
+                    if (record.datatype === 'AWND') {
+                        dailyData[date].wind = record.value * 0.44704;
+                    }
+                });
+                
+                // Calculate statistics
+                let tempSum = 0, tempCount = 0, tempMin = Infinity, tempMax = -Infinity;
+                let precipSum = 0, precipDays = 0;
+                let windSum = 0, windCount = 0;
+                
+                Object.values(dailyData).forEach(d => {
+                    if (d.temp !== null) {
+                        tempSum += d.temp;
+                        tempCount++;
+                        tempMin = Math.min(tempMin, d.temp);
+                        tempMax = Math.max(tempMax, d.temp);
+                    }
+                    precipSum += d.precip;
+                    if (d.precip > 0) precipDays++;
+                    if (d.wind !== null) {
+                        windSum += d.wind;
+                        windCount++;
+                    }
+                });
+                
+                const avgTemp = tempCount > 0 ? (tempSum / tempCount).toFixed(1) : 'N/A';
+                const totalPrecip = precipSum.toFixed(0);
+                const avgWind = windCount > 0 ? (windSum / windCount).toFixed(1) : 'N/A';
+                
+                // Display summary
+                document.getElementById('hist-temp').textContent = avgTemp + '°C';
+                document.getElementById('hist-temp-range').textContent = 
+                    tempMin !== Infinity ? `${tempMin.toFixed(1)}° to ${tempMax.toFixed(1)}°C` : '';
+                document.getElementById('hist-precip').textContent = totalPrecip + ' mm';
+                document.getElementById('hist-precip-days').textContent = `${precipDays} days with rain`;
+                document.getElementById('hist-wind').textContent = avgWind + ' m/s';
+                document.getElementById('hist-station').textContent = stationId;
+                document.getElementById('hist-period').textContent = `${startDate} to ${endDate}`;
+                
+                // Prepare chart data
+                const sortedDates = Object.keys(dailyData).sort();
+                const chartLabels = sortedDates.map(d => d.substring(5));
+                const tempData = sortedDates.map(d => dailyData[d].temp);
+                const precipData = sortedDates.map(d => dailyData[d].precip);
+                
+                // Create Temperature Chart
+                const tempCtx = document.getElementById('temp-chart');
+                window.tempChart = new Chart(tempCtx, {
+                    type: 'line',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            data: tempData,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxTicksLimit: 10, font: { size: 9 } } },
+                            y: { ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+                
+                // Create Precipitation Chart
+                const precipCtx = document.getElementById('precip-chart');
+                window.precipChart = new Chart(precipCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Precipitation (mm)',
+                            data: precipData,
+                            backgroundColor: '#0dcaf0',
+                            borderColor: '#0aa2c0',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxTicksLimit: 10, font: { size: 9 } } },
+                            y: { ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+                
+                document.getElementById('hist-results').style.display = 'block';
+                
+            } catch (error) {
+                console.error('NOAA API Error:', error);
+                alert(`Error fetching data: ${error.message}\n\nNote: Some stations may not have data for the selected period.`);
+            } finally {
+                document.getElementById('hist-loading').style.display = 'none';
+                document.getElementById('hist-btn-text').textContent = 'Query NOAA Data';
+            }
         };
 
         window.findNearbyFacilities = function() {
