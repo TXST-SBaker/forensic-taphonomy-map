@@ -2525,8 +2525,22 @@
                 if (!satelliteMap) {
                     initSatelliteMap();
                 }
+                
+                // Initialize layer options with default category
+                const categorySelect = document.getElementById('sat-category');
+                if (categorySelect && categorySelect.value === '') {
+                    categorySelect.value = 'modis_color';
+                }
                 updateLayerOptions();
-            }, 300);
+                
+                // Auto-load first layer after options are populated
+                setTimeout(() => {
+                    const layerSelect = document.getElementById('sat-layer');
+                    if (layerSelect && layerSelect.options.length > 0) {
+                        updateSatelliteView();
+                    }
+                }, 200);
+            }, 400);
             
             const select = document.getElementById('sat-facility');
             select.innerHTML = '';
@@ -2552,14 +2566,25 @@
         }
 
         window.updateSatelliteView = function() {
-            if (!satelliteMap) return;
+            if (!satelliteMap) {
+                console.error('Satellite map not initialized');
+                return;
+            }
             
             const facilityIndex = document.getElementById('sat-facility').value;
             const date = document.getElementById('sat-date').value;
             const layer = document.getElementById('sat-layer').value;
             
+            if (!layer) {
+                console.warn('No layer selected');
+                return;
+            }
+            
             const fac = facilitiesData[parseInt(facilityIndex)];
-            if (!fac) return;
+            if (!fac) {
+                console.error('Facility not found');
+                return;
+            }
             
             if (satelliteLayer) {
                 satelliteMap.removeLayer(satelliteLayer);
@@ -2568,25 +2593,33 @@
             // NASA GIBS WMS (no API key needed!)
             const nasaUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
             
-            satelliteLayer = L.tileLayer.wms(nasaUrl, {
-                layers: layer,
-                format: 'image/png',
-                transparent: true,
-                attribution: 'NASA GIBS',
-                time: date,
-                crs: L.CRS.EPSG4326,
-                maxZoom: 16
-            }).addTo(satelliteMap);
-            
-            satelliteMap.setView([fac.lat, fac.lon], 12);
-            
-            const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
-            marker.bindPopup(`
-                <strong>${fac.name.split('(')[0].trim()}</strong><br>
-                ${date}<br>
-                <small>Layer: ${layer}</small><br>
-                <small>Source: NASA GIBS (FREE)</small>
-            `).openPopup();
+            try {
+                satelliteLayer = L.tileLayer.wms(nasaUrl, {
+                    layers: layer,
+                    format: 'image/png',
+                    transparent: true,
+                    attribution: 'NASA GIBS',
+                    time: date,
+                    crs: L.CRS.EPSG4326,
+                    maxZoom: 16,
+                    opacity: 0.9
+                }).addTo(satelliteMap);
+                
+                satelliteMap.setView([fac.lat, fac.lon], 12);
+                
+                const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
+                marker.bindPopup(`
+                    <strong>${fac.name.split('(')[0].trim()}</strong><br>
+                    📅 ${date}<br>
+                    🛰️ ${layer}<br>
+                    <small>Source: NASA GIBS (FREE)</small>
+                `).openPopup();
+                
+                console.log(`✅ Loaded GIBS layer: ${layer} for ${date}`);
+            } catch (error) {
+                console.error('Failed to load satellite layer:', error);
+                alert('Failed to load satellite imagery. Please try a different date or layer.');
+            }
         };
             
             const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
