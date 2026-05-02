@@ -54,7 +54,7 @@ This website visualizes all known dedicated human taphonomy (forensic decomposit
 
 - Official university and facility websites (2026)
 - Peer-reviewed literature (Forensic Science International, Journal of Forensic Sciences, etc.)
-- Wikipedia "Body farm" page and recent academic summaries
+- Recent academic summaries
 - Direct outreach and facility publications
 
 Data last updated: **April 30, 2026**
