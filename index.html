@@ -444,6 +444,9 @@
                             <button class="btn btn-sm btn-outline-info" onclick="shareCurrentView()">Share View</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="citeThisMap()">Cite</button>
                             <button class="btn btn-sm btn-outline-info" onclick="showClimateInfo()">Climate Info</button>
+                            <button class="btn btn-sm btn-outline-dark" onclick="showSatelliteViewer()" title="View historical Sentinel-2 satellite imagery">
+                                🛰️ Satellite
+                            </button>
                             <button class="btn btn-sm btn-outline-dark" id="station-toggle-btn" onclick="toggleWeatherStations()" title="Show/hide NOAA weather stations">
                                 📍 Stations
                             </button>
@@ -824,6 +827,67 @@
                 </div>
                 <div class="modal-footer py-2">
                     <small class="text-muted">Data from NOAA National Centers for Environmental Information (NCEI)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sentinel Hub Satellite Viewer -->
+    <div class="modal fade" id="satelliteModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fw-semibold">🛰️ Historical Satellite Imagery (Sentinel-2)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="row g-0">
+                        <!-- Controls -->
+                        <div class="col-md-3 p-3 border-end">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Facility</label>
+                                <select class="form-select form-select-sm" id="sat-facility" onchange="updateSatelliteView()">
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Date</label>
+                                <input type="date" class="form-control form-control-sm" id="sat-date" value="2023-06-15" onchange="updateSatelliteView()">
+                                <small class="text-muted">Sentinel-2: 2015–present</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Layer</label>
+                                <select class="form-select form-select-sm" id="sat-layer" onchange="updateSatelliteView()">
+                                    <option value="TRUE_COLOR">True Color (RGB)</option>
+                                    <option value="FALSE_COLOR">False Color (NIR)</option>
+                                    <option value="NDVI">NDVI (Vegetation)</option>
+                                    <option value="MOISTURE">Moisture Index</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-primary btn-sm w-100" onclick="updateSatelliteView()">
+                                Update View
+                            </button>
+                            
+                            <div class="mt-3 p-2 bg-light rounded small">
+                                <strong>Resolution:</strong> 10m<br>
+                                <strong>Revisit:</strong> 5 days<br>
+                                <strong>Source:</strong> ESA Sentinel-2
+                            </div>
+                        </div>
+                        
+                        <!-- Map -->
+                        <div class="col-md-9">
+                            <div id="satellite-map" style="height: 500px; background: #1a1a2e;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <small class="text-muted">
+                        Sentinel-2 data © European Space Agency • 
+                        <a href="https://sentinel-hub.com/" target="_blank">sentinel-hub.com</a>
+                    </small>
                 </div>
             </div>
         </div>
@@ -2122,6 +2186,13 @@
         // NOAA Historical Weather Functions
         const NOAA_TOKEN = 'zbIhKxqemtBSzVrCJvmkqgelIElOlZuT';
 
+        // API Configuration
+        const API_TOKENS = {
+            NOAA: 'zbIhKxqemtBSzVrCJvmkqgelIElOlZuT',
+            MESOWEST: 'YOUR_MESOWEST_TOKEN',
+            SENTINEL_INSTANCE_ID: 'PLAK8f78c650caf9409f8799a98453c357b9'
+        };
+
         const facilityStations = {
             'Knoxville, Tennessee': 'USW00013891',
             'San Marcos, Texas': 'USW00012921',
@@ -2372,6 +2443,75 @@
                 document.getElementById('hist-loading').style.display = 'none';
                 document.getElementById('hist-btn-text').textContent = 'Query NOAA Data';
             }
+        };
+
+        // Sentinel Hub Satellite Viewer Functions
+        let satelliteMap = null;
+        let satelliteLayer = null;
+
+        window.showSatelliteViewer = function() {
+            const modal = new bootstrap.Modal(document.getElementById('satelliteModal'));
+            modal.show();
+            
+            setTimeout(() => {
+                if (!satelliteMap) {
+                    initSatelliteMap();
+                }
+            }, 300);
+            
+            const select = document.getElementById('sat-facility');
+            select.innerHTML = '';
+            
+            facilitiesData.forEach((fac, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = fac.name.split('(')[0].trim();
+                select.appendChild(option);
+            });
+            
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            document.getElementById('sat-date').value = oneYearAgo.toISOString().split('T')[0];
+        };
+
+        function initSatelliteMap() {
+            satelliteMap = L.map('satellite-map').setView([25, 10], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(satelliteMap);
+        }
+
+        window.updateSatelliteView = function() {
+            if (!satelliteMap) return;
+            
+            const facilityIndex = document.getElementById('sat-facility').value;
+            const date = document.getElementById('sat-date').value;
+            const layer = document.getElementById('sat-layer').value;
+            
+            const fac = facilitiesData[parseInt(facilityIndex)];
+            if (!fac) return;
+            
+            if (satelliteLayer) {
+                satelliteMap.removeLayer(satelliteLayer);
+            }
+            
+            const sentinelUrl = `https://services.sentinel-hub.com/ogc/wms/${API_TOKENS.SENTINEL_INSTANCE_ID}`;
+            
+            satelliteLayer = L.tileLayer.wms(sentinelUrl, {
+                layers: layer,
+                format: 'image/png',
+                transparent: true,
+                attribution: 'Sentinel-2 © ESA',
+                time: date,
+                crs: L.CRS.EPSG4326,
+                maxZoom: 16
+            }).addTo(satelliteMap);
+            
+            satelliteMap.setView([fac.lat, fac.lon], 14);
+            
+            const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
+            marker.bindPopup(`<strong>${fac.name.split('(')[0].trim()}</strong><br>${date}`).openPopup();
         };
 
         window.findNearbyFacilities = function() {
