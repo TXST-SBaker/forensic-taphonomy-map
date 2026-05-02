@@ -837,7 +837,7 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header bg-dark text-white py-2">
-                    <h5 class="modal-title fw-semibold">🛰️ Historical Satellite Imagery (Sentinel-2)</h5>
+                    <h5 class="modal-title fw-semibold">🛰️ Historical Satellite Imagery (NASA GIBS)</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
@@ -853,16 +853,25 @@
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Date</label>
                                 <input type="date" class="form-control form-control-sm" id="sat-date" value="2023-06-15" onchange="updateSatelliteView()">
-                                <small class="text-muted">Sentinel-2: 2015–present</small>
+                                <small class="text-muted">Available: 2000–present</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Layer Category</label>
+                                <select class="form-select form-select-sm" id="sat-category" onchange="updateLayerOptions()">
+                                    <option value="modis_color">MODIS Color (Daily)</option>
+                                    <option value="modis_indices">MODIS Indices (8-Day)</option>
+                                    <option value="modis_thermal">MODIS Thermal</option>
+                                    <option value="landsat">Landsat (Annual)</option>
+                                    <option value="viirs">VIIRS (Daily)</option>
+                                    <option value="specialized">Specialized</option>
+                                </select>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Layer</label>
                                 <select class="form-select form-select-sm" id="sat-layer" onchange="updateSatelliteView()">
-                                    <option value="TRUE_COLOR">True Color (RGB)</option>
-                                    <option value="FALSE_COLOR">False Color (NIR)</option>
-                                    <option value="NDVI">NDVI (Vegetation)</option>
-                                    <option value="MOISTURE">Moisture Index</option>
+                                    <!-- Populated dynamically -->
                                 </select>
                             </div>
                             
@@ -871,9 +880,9 @@
                             </button>
                             
                             <div class="mt-3 p-2 bg-light rounded small">
-                                <strong>Resolution:</strong> 10m<br>
-                                <strong>Revisit:</strong> 5 days<br>
-                                <strong>Source:</strong> ESA Sentinel-2
+                                <strong>Resolution:</strong> 250m-1km<br>
+                                <strong>Source:</strong> NASA GIBS<br>
+                                <strong>Cost:</strong> FREE (no API key)
                             </div>
                         </div>
                         
@@ -885,8 +894,8 @@
                 </div>
                 <div class="modal-footer py-2">
                     <small class="text-muted">
-                        Sentinel-2 data © European Space Agency • 
-                        <a href="https://sentinel-hub.com/" target="_blank">sentinel-hub.com</a>
+                        NASA GIBS • Landsat & MODIS • Free satellite imagery
+                    </small>
                     </small>
                 </div>
             </div>
@@ -2449,6 +2458,65 @@
         let satelliteMap = null;
         let satelliteLayer = null;
 
+        // NASA GIBS Layer Configuration
+        const nasaLayers = {
+            modis_color: [
+                { value: 'MODIS_Terra_CorrectedReflectance_TrueColor', label: 'True Color (Natural)' },
+                { value: 'MODIS_Terra_CorrectedReflectance_Bands721', label: 'False Color (SWIR/NIR)' },
+                { value: 'MODIS_Terra_CorrectedReflectance_Bands367', label: 'Agriculture RGB' },
+                { value: 'MODIS_Terra_SurfaceReflectance_Bands143', label: 'Surface Reflectance' }
+            ],
+            modis_indices: [
+                { value: 'MODIS_Terra_NDVI_8Day', label: 'NDVI (Vegetation Health)' },
+                { value: 'MODIS_Terra_EVI_8Day', label: 'EVI (Enhanced Vegetation)' },
+                { value: 'MODIS_Terra_Leaf_Area_Index_8Day', label: 'Leaf Area Index' },
+                { value: 'MODIS_Terra_Gross_Primary_Productivity_8Day', label: 'Gross Primary Productivity' },
+                { value: 'MODIS_Terra_Net_Primary_Productivity_8Day', label: 'Net Primary Productivity' }
+            ],
+            modis_thermal: [
+                { value: 'MODIS_Terra_Land_Surface_Temp_Day', label: 'Land Surface Temp (Day)' },
+                { value: 'MODIS_Terra_Land_Surface_Temp_Night', label: 'Land Surface Temp (Night)' },
+                { value: 'MODIS_Terra_Sea_Surface_Temp_Day', label: 'Sea Surface Temp (Day)' },
+                { value: 'MODIS_Terra_Sea_Surface_Temp_Night', label: 'Sea Surface Temp (Night)' }
+            ],
+            landsat: [
+                { value: 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual', label: 'True Color (Annual)' },
+                { value: 'Landsat_WELD_CorrectedReflectance_Bands743_Global_Annual', label: 'False Color (Annual)' },
+                { value: 'Landsat_WELD_NDVI_Global_Annual', label: 'NDVI (Annual)' },
+                { value: 'Landsat_WELD_EVI_Global_Annual', label: 'EVI (Annual)' }
+            ],
+            viirs: [
+                { value: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', label: 'True Color' },
+                { value: 'VIIRS_SNPP_CorrectedReflectance_BandsM11-I2-I1', label: 'False Color' },
+                { value: 'VIIRS_SNPP_DayNightBand_ENCC', label: 'Day/Night Band' },
+                { value: 'VIIRS_SNPP_Land_Surface_Temp_Day', label: 'Land Surface Temp (Day)' },
+                { value: 'VIIRS_SNPP_Land_Surface_Temp_Night', label: 'Land Surface Temp (Night)' }
+            ],
+            specialized: [
+                { value: 'ASTER_GDEM_Color_Index', label: 'Digital Elevation Model' },
+                { value: 'SRTM_Color_Index', label: 'Shuttle Radar Topography' },
+                { value: 'TRMM_3B43M', label: 'Precipitation Rate' },
+                { value: 'AIRS_Prata_SO2_Index_Day', label: 'Sulfur Dioxide' },
+                { value: 'OMI_Aerosol_Index', label: 'Aerosol Optical Depth' }
+            ]
+        };
+
+        function updateLayerOptions() {
+            const category = document.getElementById('sat-category').value;
+            const layerSelect = document.getElementById('sat-layer');
+            
+            layerSelect.innerHTML = '';
+            
+            if (nasaLayers[category]) {
+                nasaLayers[category].forEach(layer => {
+                    const option = document.createElement('option');
+                    option.value = layer.value;
+                    option.textContent = layer.label;
+                    layerSelect.appendChild(option);
+                });
+            }
+        }
+
         window.showSatelliteViewer = function() {
             const modal = new bootstrap.Modal(document.getElementById('satelliteModal'));
             modal.show();
@@ -2457,6 +2525,7 @@
                 if (!satelliteMap) {
                     initSatelliteMap();
                 }
+                updateLayerOptions();
             }, 300);
             
             const select = document.getElementById('sat-facility');
@@ -2496,19 +2565,29 @@
                 satelliteMap.removeLayer(satelliteLayer);
             }
             
-            const sentinelUrl = `https://services.sentinel-hub.com/ogc/wms/${API_TOKENS.SENTINEL_INSTANCE_ID}`;
+            // NASA GIBS WMS (no API key needed!)
+            const nasaUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
             
-            satelliteLayer = L.tileLayer.wms(sentinelUrl, {
+            satelliteLayer = L.tileLayer.wms(nasaUrl, {
                 layers: layer,
                 format: 'image/png',
                 transparent: true,
-                attribution: 'Sentinel-2 © ESA',
+                attribution: 'NASA GIBS',
                 time: date,
                 crs: L.CRS.EPSG4326,
                 maxZoom: 16
             }).addTo(satelliteMap);
             
-            satelliteMap.setView([fac.lat, fac.lon], 14);
+            satelliteMap.setView([fac.lat, fac.lon], 12);
+            
+            const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
+            marker.bindPopup(`
+                <strong>${fac.name.split('(')[0].trim()}</strong><br>
+                ${date}<br>
+                <small>Layer: ${layer}</small><br>
+                <small>Source: NASA GIBS (FREE)</small>
+            `).openPopup();
+        };
             
             const marker = L.marker([fac.lat, fac.lon]).addTo(satelliteMap);
             marker.bindPopup(`<strong>${fac.name.split('(')[0].trim()}</strong><br>${date}`).openPopup();
@@ -2919,6 +2998,16 @@
             initMap();
             populateDirectory();
             loadDarkModePreference();
+            
+            // Initialize satellite category dropdown if exists
+            const categorySelect = document.getElementById('sat-category');
+            if (categorySelect) {
+                categorySelect.addEventListener('change', function() {
+                    if (typeof updateLayerOptions === 'function') {
+                        updateLayerOptions();
+                    }
+                });
+            }
             
             // Keyboard shortcut: press '/' to reset map
             document.addEventListener('keydown', function(e) {
