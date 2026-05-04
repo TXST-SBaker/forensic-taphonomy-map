@@ -1,4 +1,4 @@
-[taphonomy_readme.md](https://github.com/user-attachments/files/27371384/taphonomy_readme.md)# 🦴 Global Taphonomy Research Network
+# 🦴 Global Taphonomy Research Network
 ### An Interactive Map & Environmental Profile Dashboard for Human Forensic Decomposition Research Facilities
 
 [![Updated](https://img.shields.io/badge/Updated-April%202026-00d4aa?style=flat-square)](https://github.com/)
@@ -20,10 +20,9 @@ These secure, outdoor research laboratories study how human remains decompose un
 - **Forensic entomology, soil science, and environmental forensics research**
 - **Taphonomic database development** across diverse climates and geographies
 
-The dashboard is designed to serve **three audiences**:
+The dashboard is designed to serve:
 1. **General public & potential donors** — find facilities, donation paperwork, and program contacts
 2. **Researchers & academics** — access facility profiles, donor metrics, environmental data, and published literature links
-3. **Facility administrators** — a foundation for a future private donor tracking system (in development)
 
 ---
 
